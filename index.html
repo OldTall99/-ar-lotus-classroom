@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>AR 荷花觀察教室</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/aframe/build/aframe-ar.js"></script>
+<style>
+:root{--green:#176b4b;--mint:#e8f5ed;--ink:#18352b;--gold:#f5c95d}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Noto Sans TC",sans-serif;color:var(--ink);background:#f5f8f4}
+header{padding:14px 16px;background:linear-gradient(120deg,#145b43,#2c8a61);color:white}
+header h1{font-size:21px;margin:0 0 3px}header p{font-size:13px;margin:0;opacity:.9}
+main{max-width:850px;margin:auto;padding:12px}
+.notice{background:#fff8df;border:1px solid #f0d98d;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:10px}
+.arbox{height:min(58vh,520px);min-height:320px;background:#17251e;border-radius:16px;overflow:hidden;position:relative}
+a-scene{width:100%;height:100%}.arstatus{position:absolute;z-index:5;top:10px;left:10px;right:10px;background:#10271dcc;color:white;padding:8px 11px;border-radius:10px;font-size:13px;pointer-events:none}
+.panel{background:white;border-radius:14px;padding:13px;margin-top:11px;box-shadow:0 2px 10px #173b2410}
+h2{font-size:17px;margin:0 0 9px}.buttons{display:flex;flex-wrap:wrap;gap:8px}
+button{border:0;border-radius:10px;padding:10px 12px;background:var(--mint);color:var(--green);font-weight:700;font-size:14px;cursor:pointer}
+button.primary{background:var(--green);color:white}button:disabled{opacity:.45}
+#info{min-height:66px;line-height:1.55;font-size:14px;background:#f5faf6;border-radius:10px;padding:10px}
+.small{font-size:12px;color:#5d7167;line-height:1.55}
+.quizq{font-weight:700;margin:10px 0 8px}.choice{display:block;width:100%;text-align:left;margin:6px 0;background:#f1f5f1}
+#feedback{font-size:14px;margin-top:8px;min-height:22px}
+footer{text-align:center;font-size:11px;color:#718078;padding:18px}
+@media(max-width:520px){main{padding:9px}.arbox{height:52vh;min-height:300px}}
+</style>
+</head>
+<body>
+<header><h1>🌸 AR 荷花觀察教室</h1><p>自然科學・挺水植物探索｜國小中年級</p></header>
+<main>
+<div class="notice"><b>開始前：</b>請允許相機權限，將 <b>Hiro 標記圖卡</b>放在光線充足、平坦的位置，再把手機鏡頭對準圖卡。建議列印圖卡並保持黑白方框完整。</div>
+<section class="arbox">
+<div class="arstatus" id="status">正在啟動相機…請允許瀏覽器使用相機</div>
+<a-scene embedded vr-mode-ui="enabled:false" renderer="logarithmicDepthBuffer:true; antialias:true" arjs="sourceType:webcam; debugUIEnabled:false; detectionMode:mono; matrixCodeType:3x3;">
+  <a-marker preset="hiro" id="hiroMarker">
+    <a-entity id="lotus">
+      <!-- underwater soil and water plane -->
+      <a-cylinder position="0 -0.72 0" radius="1.15" height=".12" color="#72543a"></a-cylinder>
+      <a-box position="0 -.43 0" width="2.25" height=".015" depth="2.25" color="#69b9d4" opacity=".42"></a-box>
+      <!-- roots -->
+      <a-entity id="roots" position="0 -0.55 0">
+        <a-cylinder position="-.13 -.13 0" radius-bottom=".018" radius-top=".008" height=".42" rotation="0 0 -18" color="#e6d4a2"></a-cylinder>
+        <a-cylinder position=".12 -.13 .06" radius-bottom=".018" radius-top=".008" height=".38" rotation="0 0 22" color="#e6d4a2"></a-cylinder>
+        <a-cylinder position="0 -.14 -.1" radius-bottom=".014" radius-top=".006" height=".36" rotation="12 0 0" color="#e6d4a2"></a-cylinder>
+      </a-entity>
+      <!-- rhizome -->
+      <a-cylinder id="rhizome" position="0 -.48 0" radius=".10" height=".75" rotation="0 0 90" color="#d9b66d"></a-cylinder>
+      <!-- stems -->
+      <a-cylinder position="-.22 .05 0" radius=".025" height="1.05" rotation="0 0 -10" color="#438b4b"></a-cylinder>
+      <a-cylinder position=".38 .02 .1" radius=".022" height=".92" rotation="0 0 18" color="#438b4b"></a-cylinder>
+      <a-cylinder position="0 .17 -.28" radius=".022" height="1.28" rotation="0 0 2" color="#438b4b"></a-cylinder>
+      <!-- lotus leaves: flattened discs -->
+      <a-entity id="leaf1" position="-.53 .50 0" rotation="-8 0 10"><a-circle radius=".53" color="#388b43" material="side:double"></a-circle><a-circle radius=".035" color="#a5c96a" position="0 0 .008"></a-circle></a-entity>
+      <a-entity id="leaf2" position=".55 .43 .08" rotation="5 0 -12"><a-circle radius=".43" color="#4a9c4d" material="side:double"></a-circle><a-circle radius=".028" color="#b4d47a" position="0 0 .008"></a-circle></a-entity>
+      <!-- flower stem and flower -->
+      <a-cylinder position="0 .62 -.28" radius=".025" height=".88" color="#438b4b"></a-cylinder>
+      <a-entity id="flower" position="0 1.12 -.28">
+        <a-sphere radius=".16" color="#f5c84e" scale="1 .45 1"></a-sphere>
+        <a-entity id="petals"></a-entity>
+        <a-sphere radius=".08" color="#e9a92e" position="0 .04 0"></a-sphere>
+      </a-entity>
+      <!-- seed pod -->
+      <a-entity id="pod" position=".39 .72 .1" visible="false">
+        <a-cylinder radius=".12" height=".19" color="#8da94a" rotation="0 0 0"></a-cylinder>
+        <a-sphere radius=".13" color="#9ab653" position="0 .08 0" scale="1 .45 1"></a-sphere>
+      </a-entity>
+      <!-- labels -->
+      <a-entity id="labels" visible="true">
+        <a-text value="花朵" position=".18 1.45 -.28" color="#fff7dc" align="left" width="2.2"></a-text>
+        <a-text value="葉片" position="-.95 .85 0" color="#ffffff" align="left" width="2.2"></a-text>
+        <a-text value="葉柄" position=".42 .18 .1" color="#ffffff" align="left" width="2.2"></a-text>
+        <a-text value="地下莖" position=".28 -.48 .16" color="#fff2ce" align="left" width="2.2"></a-text>
+        <a-text value="根" position=".22 -.83 .1" color="#fff2ce" align="left" width="2.2"></a-text>
+        <a-text value="水面" position="-.95 -.38 .45" color="#e5fbff" align="left" width="2.2"></a-text>
+      </a-entity>
+    </a-entity>
+  </a-marker>
+  <a-entity camera></a-entity>
+</a-scene>
+</section>
+
+<section class="panel">
+<h2>🔎 探索控制台</h2>
+<div class="buttons">
+<button class="primary" onclick="showInfo('flower')">🌸 花朵</button>
+<button onclick="showInfo('leaf')">🍃 葉片</button>
+<button onclick="showInfo('stem')">🌿 葉柄</button>
+<button onclick="showInfo('rhizome')">🟤 地下莖</button>
+<button onclick="showInfo('root')">〰️ 根</button>
+<button onclick="toggleLabels()">標籤開／關</button>
+<button onclick="toggleUnderwater()">水下構造提示</button>
+<button onclick="growth()">花朵生長</button>
+</div>
+<div id="info" style="margin-top:10px"><b>觀察任務：</b>先找到圖卡中的 3D 荷花。再點選上方按鈕，認識各部位的位置與功能。</div>
+<p class="small">小提醒：這是教學示意 3D 模型，呈現主要構造與水面上下關係；實際荷花的葉片可能浮於水面或挺出水面。</p>
+</section>
+
+<section class="panel">
+<h2>🧪 觀察挑戰</h2>
+<div id="quiz">
+<div class="quizq" id="question">第 1 題：荷花的根主要生長在哪裡？</div>
+<div id="choices"></div><div id="feedback"></div>
+</div>
+</section>
+<section class="panel">
+<h2>📝 我的觀察紀錄</h2>
+<p class="small">請觀察 AR 模型，完成下面句子：</p>
+<p>1. 荷花的根長在＿＿＿＿＿＿。</p>
+<p>2. 荷花的花朵和大部分葉片挺出＿＿＿＿＿＿。</p>
+<p>3. 荷花屬於＿＿＿＿＿＿植物。</p>
+</section>
+<footer>AR 荷花觀察教室｜請在 HTTPS 網頁或 localhost 環境開啟，並允許相機權限</footer>
+</main>
+<script>
+const facts={
+ flower:["花朵","荷花的花朵通常挺出水面。花朵由花瓣、雄蕊和雌蕊等構造組成，授粉後雌蕊部分會發育。"],
+ leaf:["葉片","荷葉寬大，常呈圓形。葉片可能挺出水面，也可能貼近水面；表面有特殊微細結構，讓水珠容易滾動。"],
+ stem:["葉柄","葉柄連接葉片與地下莖，支撐葉片伸向水面上方，並協助運送水分和養分。"],
+ rhizome:["地下莖","荷花的地下莖橫向生長在水底泥土中，能儲存養分，也能長出新芽和根。常見食用的蓮藕就是荷花的地下莖。"],
+ root:["根","根固定植物，並從泥土中吸收水分和礦物質。荷花的根生長在水底泥土裡。"]
+};
+function showInfo(k){document.getElementById('info').innerHTML='<b>'+facts[k][0]+'：</b>'+facts[k][1]}
+let labelsOn=true,under=false,stage=0;
+function toggleLabels(){labelsOn=!labelsOn;document.querySelector('#labels').setAttribute('visible',labelsOn);document.getElementById('info').innerHTML=labelsOn?'已顯示構造標籤。':'已隱藏構造標籤，試著自己找找看！'}
+function toggleUnderwater(){under=!under;document.querySelector('#roots').setAttribute('visible',under);document.querySelector('#rhizome').setAttribute('visible',under);document.getElementById('info').innerHTML=under?'<b>水下觀察：</b>注意水面下的根與地下莖，它們都在水底泥土附近。':'已回到完整荷花模型。'}
+function growth(){stage=(stage+1)%3;const f=document.querySelector('#flower');const pod=document.querySelector('#pod');if(stage===0){f.setAttribute('scale','0.65 0.65 0.65');pod.setAttribute('visible',false);document.getElementById('info').innerHTML='<b>花苞階段：</b>花瓣尚未完全展開。'}else if(stage===1){f.setAttribute('scale','1 1 1');pod.setAttribute('visible',false);document.getElementById('info').innerHTML='<b>盛開階段：</b>花瓣展開，花朵完整可見。'}else{f.setAttribute('scale','.45 .45 .45');pod.setAttribute('visible',true);document.getElementById('info').innerHTML='<b>花後階段：</b>花謝後，雌蕊部分發育形成蓮蓬，裡面有蓮子。'}}
+const qs=[
+{q:"荷花的根主要生長在哪裡？",a:["水面上","水底泥土中","漂浮在水面"],c:1,e:"根固定植物，並從水底泥土吸收水分和礦物質。"},
+{q:"荷花屬於哪一類水生植物？",a:["挺水植物","沉水植物","漂浮植物"],c:0,e:"荷花的根在水底泥土中，花朵及大部分葉片挺出水面。"},
+{q:"蓮藕是荷花的哪個部位？",a:["根","葉柄","地下莖"],c:2,e:"蓮藕是荷花的地下莖，橫向生長在泥土中。"},
+{q:"荷花花謝後，會形成什麼構造？",a:["蓮蓬","松果","果莢"],c:0,e:"花謝後，雌蕊部分會發育形成蓮蓬，裡面有蓮子。"}
+];
+let qi=0,score=0,locked=false;
+function renderQ(){document.getElementById('question').textContent=`第 ${qi+1} 題：${qs[qi].q}`;document.getElementById('choices').innerHTML=qs[qi].a.map((x,i)=>`<button class="choice" onclick="answer(${i})">${"ABC"[i]}. ${x}</button>`).join('');document.getElementById('feedback').textContent='';}
+function answer(i){if(locked)return;locked=true;const q=qs[qi];if(i===q.c){score++;document.getElementById('feedback').innerHTML='✅ 答對了！'+q.e}else{document.getElementById('feedback').innerHTML='再想一想！正確答案：'+q.a[q.c]+'。'+q.e}setTimeout(()=>{qi++;locked=false;if(qi<qs.length){renderQ()}else{document.getElementById('question').textContent='挑戰完成！';document.getElementById('choices').innerHTML=`<b>你的得分：${score} / ${qs.length}</b>　<button onclick="restart()">再玩一次</button>`;document.getElementById('feedback').textContent='做得好！你已完成荷花觀察挑戰。'}},2200)}
+function restart(){qi=0;score=0;renderQ()}renderQ();
+const marker=document.querySelector('#hiroMarker');marker.addEventListener('markerFound',()=>document.getElementById('status').textContent='🌸 找到圖卡了！移動手機，從不同角度觀察 3D 荷花。');marker.addEventListener('markerLost',()=>document.getElementById('status').textContent='尚未看到圖卡，請將鏡頭對準 Hiro 圖卡。');
+</script>
+</body></html>
