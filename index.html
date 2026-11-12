@@ -13,7 +13,6 @@
 :root{--green:#176b4b;--mint:#e8f5ed;--ink:#18352b;--gold:#f5c95d}
 *{box-sizing:border-box}
 
-/* 關鍵修正 1：讓 body 背景完全透明，避免遮蓋鏡頭視訊 */
 html, body {
   margin: 0;
   padding: 0;
@@ -25,7 +24,6 @@ html, body {
   background-color: transparent !important;
 }
 
-/* 關鍵修正 2：確保 AR.js 生成的相機 video 填滿畫面並置於最底層 */
 video {
   position: fixed !important;
   top: 0 !important;
@@ -36,7 +34,6 @@ video {
   z-index: -2 !important;
 }
 
-/* 關鍵修正 3：讓 A-Frame 的 3D 渲染畫布透明 */
 a-scene {
   position: fixed !important;
   top: 0 !important;
@@ -49,7 +46,6 @@ a-scene {
   background-color: transparent !important;
 }
 
-/* 頂部標題與狀態列 (浮動在畫面上方) */
 header {
   position: fixed;
   top: 8px;
@@ -84,14 +80,13 @@ header p { font-size: 11px; margin: 0; opacity: .9; }
   pointer-events: none;
 }
 
-/* 底部滑動控制抽屜 */
 .bottom-panel {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 10;
-  max-height: 48vh;
+  max-height: 46vh;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border-radius: 18px 18px 0 0;
@@ -141,7 +136,6 @@ button.primary { background: var(--green); color: white; }
 
 <div class="arstatus" id="status">正在啟動相機…請允許權限並對準 Hiro 圖卡</div>
 
-<!-- 關鍵修正 4：加入 renderer="alpha: true;" 確保 WebGL 畫布穿透相機畫面 -->
 <a-scene
   embedded
   vr-mode-ui="enabled: false"
@@ -149,10 +143,11 @@ button.primary { background: var(--green); color: white; }
   arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3;">
 
   <a-marker preset="hiro" id="hiroMarker">
-    <a-entity id="lotus">
+    <!-- 將模型整體稍微縮小並上移，避免底部陷入圖卡或被下方控制面板遮擋 -->
+    <a-entity id="lotus" position="0 0.65 0" scale="0.75 0.75 0.75">
       <!-- 水底泥土與半透明水面 -->
-      <a-cylinder position="0 -0.72 0" radius="1.15" height=".12" color="#72543a"></a-cylinder>
-      <a-box position="0 -.43 0" width="2.25" height=".015" depth="2.25" color="#69b9d4" opacity=".42"></a-box>
+      <a-cylinder id="mud" position="0 -0.72 0" radius="1.15" height=".12" color="#72543a"></a-cylinder>
+      <a-box id="water" position="0 -.43 0" width="2.25" height=".015" depth="2.25" color="#69b9d4" opacity=".42"></a-box>
       
       <!-- 根 -->
       <a-entity id="roots" position="0 -0.55 0">
@@ -193,15 +188,8 @@ button.primary { background: var(--green); color: white; }
         <a-sphere radius=".13" color="#9ab653" position="0 .08 0" scale="1 .45 1"></a-sphere>
       </a-entity>
       
-      <!-- 構造標籤 -->
-      <a-entity id="labels" visible="true">
-        <a-text value="花朵" position=".18 1.45 -.28" color="#fff7dc" align="left" width="2.2"></a-text>
-        <a-text value="葉片" position="-.95 .85 0" color="#ffffff" align="left" width="2.2"></a-text>
-        <a-text value="葉柄" position=".42 .18 .1" color="#ffffff" align="left" width="2.2"></a-text>
-        <a-text value="地下莖" position=".28 -.48 .16" color="#fff2ce" align="left" width="2.2"></a-text>
-        <a-text value="根" position=".22 -.83 .1" color="#fff2ce" align="left" width="2.2"></a-text>
-        <a-text value="水面" position="-.95 -.38 .45" color="#e5fbff" align="left" width="2.2"></a-text>
-      </a-entity>
+      <!-- 中文構造標籤容器 (由 JS 動態繪製 Canvas 貼圖以支援中文字) -->
+      <a-entity id="labels" visible="true"></a-entity>
     </a-entity>
   </a-marker>
   
@@ -218,7 +206,7 @@ button.primary { background: var(--green); color: white; }
     <button onclick="showInfo('rhizome')">🟤 地下莖</button>
     <button onclick="showInfo('root')">〰️ 根</button>
     <button onclick="toggleLabels()">標籤開／關</button>
-    <button onclick="toggleUnderwater()">水下構造</button>
+    <button onclick="toggleUnderwater()">透視水下</button>
     <button onclick="growth()">花朵生長</button>
   </div>
   
@@ -237,6 +225,81 @@ button.primary { background: var(--green); color: white; }
 </section>
 
 <script>
+// 1. 動態生成荷花花瓣 (外圈 12 片 + 內圈 8 片)
+function buildPetals() {
+  const petalsEl = document.querySelector('#petals');
+  // 外圈花瓣
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * 360) / 12;
+    const rad = (angle * Math.PI) / 180;
+    const p = document.createElement('a-sphere');
+    p.setAttribute('radius', '0.16');
+    p.setAttribute('scale', '0.55 1.35 0.22');
+    p.setAttribute('color', '#f78fb3');
+    p.setAttribute('position', `${Math.sin(rad) * 0.22} 0.08 ${Math.cos(rad) * 0.22}`);
+    p.setAttribute('rotation', `42 ${angle} 0`);
+    petalsEl.appendChild(p);
+  }
+  // 內圈花瓣
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 360) / 8 + 22.5;
+    const rad = (angle * Math.PI) / 180;
+    const p = document.createElement('a-sphere');
+    p.setAttribute('radius', '0.14');
+    p.setAttribute('scale', '0.5 1.25 0.2');
+    p.setAttribute('color', '#f8a5c2');
+    p.setAttribute('position', `${Math.sin(rad) * 0.14} 0.11 ${Math.cos(rad) * 0.14}`);
+    p.setAttribute('rotation', `25 ${angle} 0`);
+    petalsEl.appendChild(p);
+  }
+}
+
+// 2. 動態生成支援中文的 3D 標籤貼圖
+function buildChineseLabels() {
+  const labelData = [
+    { text: "花朵", pos: "0.35 1.35 -0.28", bg: "#d63384" },
+    { text: "葉片", pos: "-0.85 0.72 0", bg: "#198754" },
+    { text: "葉柄", pos: "0.48 0.15 0.1", bg: "#198754" },
+    { text: "水面", pos: "-0.95 -0.35 0.45", bg: "#0dcaf0", color: "#000" },
+    { text: "地下莖", pos: "0.52 -0.48 0.16", bg: "#856404" },
+    { text: "根", pos: "0.35 -0.82 0.1", bg: "#6c757d" }
+  ];
+
+  const container = document.querySelector('#labels');
+  labelData.forEach(item => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 96;
+    const ctx = canvas.getContext('2d');
+
+    // 繪製圓角標籤底色
+    ctx.fillStyle = item.bg || 'rgba(20, 91, 67, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(16, 16, 224, 64, 16);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // 繪製中文字
+    ctx.fillStyle = item.color || '#ffffff';
+    ctx.font = 'bold 36px "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.text, 128, 50);
+
+    const plane = document.createElement('a-plane');
+    plane.setAttribute('position', item.pos);
+    plane.setAttribute('width', '0.52');
+    plane.setAttribute('height', '0.2');
+    plane.setAttribute('material', `src: ${canvas.toDataURL()}; transparent: true; side: double;`);
+    container.appendChild(plane);
+  });
+}
+
+buildPetals();
+buildChineseLabels();
+
 const facts = {
   flower: ["花朵", "荷花的花朵通常挺出水面。由花瓣、雄蕊與雌蕊組成，授粉後雌蕊發育為蓮蓬。"],
   leaf: ["葉片", "荷葉寬大，挺出水面；表面有特殊微細結構與蠟質層，水滴會形成水珠滾動不易弄濕。"],
@@ -249,7 +312,7 @@ function showInfo(k){
   document.getElementById('info').innerHTML = '<b>' + facts[k][0] + '：</b>' + facts[k][1];
 }
 
-let labelsOn = true, under = false, stage = 0;
+let labelsOn = true, under = false, stage = 1; // 預設為盛開階段 (stage = 1)
 
 function toggleLabels(){
   labelsOn = !labelsOn;
@@ -257,11 +320,19 @@ function toggleLabels(){
   document.getElementById('info').innerHTML = labelsOn ? '已顯示構造標籤。' : '已隱藏構造標籤，試著自己指認看看！';
 }
 
+// 修正：切換「透視水下」時，讓泥土變半透明，凸顯根與地下莖
 function toggleUnderwater(){
   under = !under;
-  document.querySelector('#roots').setAttribute('visible', under);
-  document.querySelector('#rhizome').setAttribute('visible', under);
-  document.getElementById('info').innerHTML = under ? '<b>水下觀察：</b>觀察水面下的地下莖與根，它們都埋在泥土附近。' : '已恢復為完整荷花模型。';
+  const mud = document.querySelector('#mud');
+  if (under) {
+    mud.setAttribute('opacity', '0.25');
+    mud.setAttribute('transparent', 'true');
+    document.getElementById('info').innerHTML = '<b>透視水下：</b>泥土已半透明化，請觀察埋在泥土中的地下莖（蓮藕）與根！';
+  } else {
+    mud.setAttribute('opacity', '1');
+    mud.setAttribute('transparent', 'false');
+    document.getElementById('info').innerHTML = '已恢復為一般視角。';
+  }
 }
 
 function growth(){
@@ -269,15 +340,17 @@ function growth(){
   const f = document.querySelector('#flower');
   const pod = document.querySelector('#pod');
   if(stage === 0){
-    f.setAttribute('scale', '0.65 0.65 0.65');
+    f.setAttribute('visible', true);
+    f.setAttribute('scale', '0.55 0.75 0.55');
     pod.setAttribute('visible', false);
-    document.getElementById('info').innerHTML = '<b>花苞階段：</b>花瓣尚未完全展開。';
+    document.getElementById('info').innerHTML = '<b>花苞階段：</b>花瓣緊閉尚未完全展開。';
   } else if(stage === 1){
+    f.setAttribute('visible', true);
     f.setAttribute('scale', '1 1 1');
     pod.setAttribute('visible', false);
     document.getElementById('info').innerHTML = '<b>盛開階段：</b>花瓣完全展開，花蕊清晰可見。';
   } else {
-    f.setAttribute('scale', '.45 .45 .45');
+    f.setAttribute('visible', false);
     pod.setAttribute('visible', true);
     document.getElementById('info').innerHTML = '<b>花後階段：</b>花謝後雌蕊發育為蓮蓬，裡面結有蓮子。';
   }
@@ -315,7 +388,7 @@ function answer(i){
       renderQ();
     } else {
       document.getElementById('question').textContent = '挑戰完成！';
-      document.getElementById('choices').innerHTML = `<b>你的得分：${score} / ${qs.length}</b>　<button onclick="restart()">再玩一次</button>`;
+      document.getElementById('choices').innerHTML = `<b>你的得分：${score} / ${qs.length}</b> <button onclick="restart()">再玩一次</button>`;
       document.getElementById('feedback').textContent = '太棒了！你已完成挺水植物荷花的所有觀察挑戰。';
     }
   }, 2200);
@@ -335,6 +408,15 @@ marker.addEventListener('markerFound', () => {
 });
 marker.addEventListener('markerLost', () => {
   document.getElementById('status').textContent = '尚未看到圖卡，請將鏡頭對準 Hiro 圖卡。';
+});
+
+// 確保 iOS Safari 相機 video 具備 playsinline 屬性
+window.addEventListener('arjs-video-loaded', () => {
+  const video = document.querySelector('video');
+  if (video) {
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+  }
 });
 </script>
 </body>
