@@ -21,6 +21,11 @@ html, body {
   overflow: hidden;
   font-family: system-ui, "Noto Sans TC", sans-serif;
   color: var(--ink);
+  background-color: #10271d; /* 未開啟相機時的深綠色背景 */
+}
+
+/* 當相機啟動後，將背景設為完全透明 */
+body.ar-active {
   background-color: transparent !important;
 }
 
@@ -46,6 +51,86 @@ a-scene {
   background-color: transparent !important;
 }
 
+/* 啟動畫面覆蓋層 */
+#start-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: linear-gradient(160deg, #145b43 0%, #0d3b2b 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+#start-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.start-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 32px 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.start-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.start-card h1 {
+  font-size: 22px;
+  margin: 0 0 8px;
+  letter-spacing: 0.5px;
+}
+
+.start-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #d8efe4;
+  margin: 0 0 24px;
+}
+
+#start-btn {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  background: var(--gold);
+  color: #18352b;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(245, 201, 93, 0.4);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+#start-btn:active {
+  transform: scale(0.96);
+}
+
+.hint-box {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #a8d5c2;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+/* 頂部標題與狀態列 */
 header {
   position: fixed;
   top: 8px;
@@ -80,6 +165,7 @@ header p { font-size: 11px; margin: 0; opacity: .9; }
   pointer-events: none;
 }
 
+/* 底部控制面板 */
 .bottom-panel {
   position: fixed;
   bottom: 0;
@@ -129,72 +215,28 @@ button.primary { background: var(--green); color: white; }
 </head>
 <body>
 
+<!-- 啟動遮罩畫面：按下按鈕才建立 AR 場景與開啟相機 -->
+<div id="start-overlay">
+  <div class="start-card">
+    <span class="start-icon">🌸</span>
+    <h1>AR 荷花觀察教室</h1>
+    <p>透過擴增實境，立體觀察挺水植物「荷花」從水底泥土到挺出水面的完整構造。</p>
+    <button id="start-btn" onclick="startAR()">📷 開啟相機並開始掃描</button>
+    <div class="hint-box">
+      💡 請準備好 <b>Hiro 圖卡</b>，點擊按鈕後允許瀏覽器存取相機權限即可開始。
+    </div>
+  </div>
+</div>
+
 <header>
   <h1>🌸 AR 荷花觀察教室</h1>
   <p>自然科學・挺水植物探索單元</p>
 </header>
 
-<div class="arstatus" id="status">正在啟動相機…請允許權限並對準 Hiro 圖卡</div>
+<div class="arstatus" id="status">等待啟動相機…</div>
 
-<a-scene
-  embedded
-  vr-mode-ui="enabled: false"
-  renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true;"
-  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3;">
-
-  <a-marker preset="hiro" id="hiroMarker">
-    <!-- 將模型整體稍微縮小並上移，避免底部陷入圖卡或被下方控制面板遮擋 -->
-    <a-entity id="lotus" position="0 0.65 0" scale="0.75 0.75 0.75">
-      <!-- 水底泥土與半透明水面 -->
-      <a-cylinder id="mud" position="0 -0.72 0" radius="1.15" height=".12" color="#72543a"></a-cylinder>
-      <a-box id="water" position="0 -.43 0" width="2.25" height=".015" depth="2.25" color="#69b9d4" opacity=".42"></a-box>
-      
-      <!-- 根 -->
-      <a-entity id="roots" position="0 -0.55 0">
-        <a-cylinder position="-.13 -.13 0" radius-bottom=".018" radius-top=".008" height=".42" rotation="0 0 -18" color="#e6d4a2"></a-cylinder>
-        <a-cylinder position=".12 -.13 .06" radius-bottom=".018" radius-top=".008" height=".38" rotation="0 0 22" color="#e6d4a2"></a-cylinder>
-        <a-cylinder position="0 -.14 -.1" radius-bottom=".014" radius-top=".006" height=".36" rotation="12 0 0" color="#e6d4a2"></a-cylinder>
-      </a-entity>
-      
-      <!-- 地下莖 (蓮藕) -->
-      <a-cylinder id="rhizome" position="0 -.48 0" radius=".10" height=".75" rotation="0 0 90" color="#d9b66d"></a-cylinder>
-      
-      <!-- 葉柄 -->
-      <a-cylinder position="-.22 .05 0" radius=".025" height="1.05" rotation="0 0 -10" color="#438b4b"></a-cylinder>
-      <a-cylinder position=".38 .02 .1" radius=".022" height=".92" rotation="0 0 18" color="#438b4b"></a-cylinder>
-      <a-cylinder position="0 .17 -.28" radius=".022" height="1.28" rotation="0 0 2" color="#438b4b"></a-cylinder>
-      
-      <!-- 荷葉 -->
-      <a-entity id="leaf1" position="-.53 .50 0" rotation="-8 0 10">
-        <a-circle radius=".53" color="#388b43" material="side:double"></a-circle>
-        <a-circle radius=".035" color="#a5c96a" position="0 0 .008"></a-circle>
-      </a-entity>
-      <a-entity id="leaf2" position=".55 .43 .08" rotation="5 0 -12">
-        <a-circle radius=".43" color="#4a9c4d" material="side:double"></a-circle>
-        <a-circle radius=".028" color="#b4d47a" position="0 0 .008"></a-circle>
-      </a-entity>
-      
-      <!-- 花梗與花朵 -->
-      <a-cylinder position="0 .62 -.28" radius=".025" height=".88" color="#438b4b"></a-cylinder>
-      <a-entity id="flower" position="0 1.12 -.28">
-        <a-sphere radius=".16" color="#f5c84e" scale="1 .45 1"></a-sphere>
-        <a-entity id="petals"></a-entity>
-        <a-sphere radius=".08" color="#e9a92e" position="0 .04 0"></a-sphere>
-      </a-entity>
-      
-      <!-- 蓮蓬 -->
-      <a-entity id="pod" position=".39 .72 .1" visible="false">
-        <a-cylinder radius=".12" height=".19" color="#8da94a" rotation="0 0 0"></a-cylinder>
-        <a-sphere radius=".13" color="#9ab653" position="0 .08 0" scale="1 .45 1"></a-sphere>
-      </a-entity>
-      
-      <!-- 中文構造標籤容器 (由 JS 動態繪製 Canvas 貼圖以支援中文字) -->
-      <a-entity id="labels" visible="true"></a-entity>
-    </a-entity>
-  </a-marker>
-  
-  <a-entity camera></a-entity>
-</a-scene>
+<!-- AR 場景容器（初始為空，點擊按鈕後才動態注入以延遲請求相機權限） -->
+<div id="ar-container"></div>
 
 <!-- 底部控制面板 -->
 <section class="bottom-panel">
@@ -225,10 +267,94 @@ button.primary { background: var(--green); color: white; }
 </section>
 
 <script>
+let arStarted = false;
+
+// 按下按鈕後才初始化 A-Frame 與 AR.js（藉此控制相機啟動時機）
+function startAR() {
+  if (arStarted) return;
+  arStarted = true;
+
+  // 隱藏啟動覆蓋層並更新狀態提示
+  document.getElementById('start-overlay').classList.add('hidden');
+  document.body.classList.add('ar-active');
+  document.getElementById('status').textContent = '正在啟動相機…請允許權限並對準 Hiro 圖卡';
+
+  // 動態插入 <a-scene>
+  const container = document.getElementById('ar-container');
+  container.innerHTML = `
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: false"
+      renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true;"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3;">
+
+      <a-marker preset="hiro" id="hiroMarker">
+        <a-entity id="lotus" position="0 0.65 0" scale="0.75 0.75 0.75">
+          <!-- 水底泥土與半透明水面 -->
+          <a-cylinder id="mud" position="0 -0.72 0" radius="1.15" height=".12" color="#72543a"></a-cylinder>
+          <a-box id="water" position="0 -.43 0" width="2.25" height=".015" depth="2.25" color="#69b9d4" opacity=".42"></a-box>
+          
+          <!-- 根 -->
+          <a-entity id="roots" position="0 -0.55 0">
+            <a-cylinder position="-.13 -.13 0" radius-bottom=".018" radius-top=".008" height=".42" rotation="0 0 -18" color="#e6d4a2"></a-cylinder>
+            <a-cylinder position=".12 -.13 .06" radius-bottom=".018" radius-top=".008" height=".38" rotation="0 0 22" color="#e6d4a2"></a-cylinder>
+            <a-cylinder position="0 -.14 -.1" radius-bottom=".014" radius-top=".006" height=".36" rotation="12 0 0" color="#e6d4a2"></a-cylinder>
+          </a-entity>
+          
+          <!-- 地下莖 (蓮藕) -->
+          <a-cylinder id="rhizome" position="0 -.48 0" radius=".10" height=".75" rotation="0 0 90" color="#d9b66d"></a-cylinder>
+          
+          <!-- 葉柄 -->
+          <a-cylinder position="-.22 .05 0" radius=".025" height="1.05" rotation="0 0 -10" color="#438b4b"></a-cylinder>
+          <a-cylinder position=".38 .02 .1" radius=".022" height=".92" rotation="0 0 18" color="#438b4b"></a-cylinder>
+          <a-cylinder position="0 .17 -.28" radius=".022" height="1.28" rotation="0 0 2" color="#438b4b"></a-cylinder>
+          
+          <!-- 荷葉 -->
+          <a-entity id="leaf1" position="-.53 .50 0" rotation="-8 0 10">
+            <a-circle radius=".53" color="#388b43" material="side:double"></a-circle>
+            <a-circle radius=".035" color="#a5c96a" position="0 0 .008"></a-circle>
+          </a-entity>
+          <a-entity id="leaf2" position=".55 .43 .08" rotation="5 0 -12">
+            <a-circle radius=".43" color="#4a9c4d" material="side:double"></a-circle>
+            <a-circle radius=".028" color="#b4d47a" position="0 0 .008"></a-circle>
+          </a-entity>
+          
+          <!-- 花梗與花朵 -->
+          <a-cylinder position="0 .62 -.28" radius=".025" height=".88" color="#438b4b"></a-cylinder>
+          <a-entity id="flower" position="0 1.12 -.28">
+            <a-sphere radius=".16" color="#f5c84e" scale="1 .45 1"></a-sphere>
+            <a-entity id="petals"></a-entity>
+            <a-sphere radius=".08" color="#e9a92e" position="0 .04 0"></a-sphere>
+          </a-entity>
+          
+          <!-- 蓮蓬 -->
+          <a-entity id="pod" position=".39 .72 .1" visible="false">
+            <a-cylinder radius=".12" height=".19" color="#8da94a" rotation="0 0 0"></a-cylinder>
+            <a-sphere radius=".13" color="#9ab653" position="0 .08 0" scale="1 .45 1"></a-sphere>
+          </a-entity>
+          
+          <!-- 中文構造標籤容器 -->
+          <a-entity id="labels" visible="true"></a-entity>
+        </a-entity>
+      </a-marker>
+      
+      <a-entity camera></a-entity>
+    </a-scene>
+  `;
+
+  // 等待場景建立後初始化花瓣、中文標籤與圖卡偵測事件
+  const scene = container.querySelector('a-scene');
+  scene.addEventListener('loaded', () => {
+    buildPetals();
+    buildChineseLabels();
+    bindMarkerEvents();
+  });
+}
+
 // 1. 動態生成荷花花瓣 (外圈 12 片 + 內圈 8 片)
 function buildPetals() {
   const petalsEl = document.querySelector('#petals');
-  // 外圈花瓣
+  if (!petalsEl) return;
   for (let i = 0; i < 12; i++) {
     const angle = (i * 360) / 12;
     const rad = (angle * Math.PI) / 180;
@@ -240,7 +366,6 @@ function buildPetals() {
     p.setAttribute('rotation', `42 ${angle} 0`);
     petalsEl.appendChild(p);
   }
-  // 內圈花瓣
   for (let i = 0; i < 8; i++) {
     const angle = (i * 360) / 8 + 22.5;
     const rad = (angle * Math.PI) / 180;
@@ -256,6 +381,9 @@ function buildPetals() {
 
 // 2. 動態生成支援中文的 3D 標籤貼圖
 function buildChineseLabels() {
+  const container = document.querySelector('#labels');
+  if (!container) return;
+
   const labelData = [
     { text: "花朵", pos: "0.35 1.35 -0.28", bg: "#d63384" },
     { text: "葉片", pos: "-0.85 0.72 0", bg: "#198754" },
@@ -265,14 +393,12 @@ function buildChineseLabels() {
     { text: "根", pos: "0.35 -0.82 0.1", bg: "#6c757d" }
   ];
 
-  const container = document.querySelector('#labels');
   labelData.forEach(item => {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 96;
     const ctx = canvas.getContext('2d');
 
-    // 繪製圓角標籤底色
     ctx.fillStyle = item.bg || 'rgba(20, 91, 67, 0.9)';
     ctx.beginPath();
     ctx.roundRect(16, 16, 224, 64, 16);
@@ -281,7 +407,6 @@ function buildChineseLabels() {
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    // 繪製中文字
     ctx.fillStyle = item.color || '#ffffff';
     ctx.font = 'bold 36px "Noto Sans TC", sans-serif';
     ctx.textAlign = 'center';
@@ -297,8 +422,17 @@ function buildChineseLabels() {
   });
 }
 
-buildPetals();
-buildChineseLabels();
+// 3. 監聽圖卡追蹤事件
+function bindMarkerEvents() {
+  const marker = document.querySelector('#hiroMarker');
+  if (!marker) return;
+  marker.addEventListener('markerFound', () => {
+    document.getElementById('status').textContent = '🌸 找到圖卡了！移動手機，從不同角度觀察 3D 荷花。';
+  });
+  marker.addEventListener('markerLost', () => {
+    document.getElementById('status').textContent = '尚未看到圖卡，請將鏡頭對準 Hiro 圖卡。';
+  });
+}
 
 const facts = {
   flower: ["花朵", "荷花的花朵通常挺出水面。由花瓣、雄蕊與雌蕊組成，授粉後雌蕊發育為蓮蓬。"],
@@ -312,18 +446,20 @@ function showInfo(k){
   document.getElementById('info').innerHTML = '<b>' + facts[k][0] + '：</b>' + facts[k][1];
 }
 
-let labelsOn = true, under = false, stage = 1; // 預設為盛開階段 (stage = 1)
+let labelsOn = true, under = false, stage = 1;
 
 function toggleLabels(){
+  const labels = document.querySelector('#labels');
+  if (!labels) return;
   labelsOn = !labelsOn;
-  document.querySelector('#labels').setAttribute('visible', labelsOn);
+  labels.setAttribute('visible', labelsOn);
   document.getElementById('info').innerHTML = labelsOn ? '已顯示構造標籤。' : '已隱藏構造標籤，試著自己指認看看！';
 }
 
-// 修正：切換「透視水下」時，讓泥土變半透明，凸顯根與地下莖
 function toggleUnderwater(){
-  under = !under;
   const mud = document.querySelector('#mud');
+  if (!mud) return;
+  under = !under;
   if (under) {
     mud.setAttribute('opacity', '0.25');
     mud.setAttribute('transparent', 'true');
@@ -336,9 +472,11 @@ function toggleUnderwater(){
 }
 
 function growth(){
-  stage = (stage + 1) % 3;
   const f = document.querySelector('#flower');
   const pod = document.querySelector('#pod');
+  if (!f || !pod) return;
+
+  stage = (stage + 1) % 3;
   if(stage === 0){
     f.setAttribute('visible', true);
     f.setAttribute('scale', '0.55 0.75 0.55');
@@ -388,7 +526,7 @@ function answer(i){
       renderQ();
     } else {
       document.getElementById('question').textContent = '挑戰完成！';
-      document.getElementById('choices').innerHTML = `<b>你的得分：${score} / ${qs.length}</b> <button onclick="restart()">再玩一次</button>`;
+      document.getElementById('choices').innerHTML = `<b>你的得分：${score} / ${qs.length}</b>　<button onclick="restart()">再玩一次</button>`;
       document.getElementById('feedback').textContent = '太棒了！你已完成挺水植物荷花的所有觀察挑戰。';
     }
   }, 2200);
@@ -400,15 +538,6 @@ function restart(){
   renderQ();
 }
 renderQ();
-
-// 監聽圖卡追蹤事件
-const marker = document.querySelector('#hiroMarker');
-marker.addEventListener('markerFound', () => {
-  document.getElementById('status').textContent = '🌸 找到圖卡了！移動手機，從不同角度觀察 3D 荷花。';
-});
-marker.addEventListener('markerLost', () => {
-  document.getElementById('status').textContent = '尚未看到圖卡，請將鏡頭對準 Hiro 圖卡。';
-});
 
 // 確保 iOS Safari 相機 video 具備 playsinline 屬性
 window.addEventListener('arjs-video-loaded', () => {
