@@ -1,682 +1,535 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>AR 荷花觀察教室</title>
+<meta charset="UTF-8">
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+<title>荷花與水位 AR 實驗</title>
 
-<!-- A-Frame 核心與 MindAR (自然圖片追蹤引擎) -->
-<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<!-- A-Frame 與 MindAR 影像辨識套件 -->
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
 <style>
-:root{--green:#176b4b;--mint:#e8f5ed;--ink:#18352b;--gold:#f5c95d}
-*{box-sizing:border-box}
+  * {
+    box-sizing: border-box;
+  }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  font-family: system-ui, "Noto Sans TC", sans-serif;
-  color: var(--ink);
-  background-color: #10271d; /* 未開啟相機時的深綠色背景 */
-}
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+  }
 
-/* 當相機啟動後，將背景設為完全透明 */
-body.ar-active {
-  background-color: transparent !important;
-}
+  [hidden] {
+    display: none !important;
+  }
 
-/* 修正 MindAR 相機視訊層級，確保在畫布正下方且不被遮擋 */
-video {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  z-index: 0 !important;
-}
+  .panel {
+    position: fixed;
+    z-index: 10;
+    left: 10px;
+    right: 10px;
+    max-width: 480px;
+    margin: auto;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 14px;
+    border-radius: 16px;
+    box-shadow: 0 4px 22px rgba(0, 0, 0, 0.14);
+    backdrop-filter: blur(6px);
+  }
 
-a-scene {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 1 !important;
-  background-color: transparent !important;
-}
-.a-canvas {
-  background-color: transparent !important;
-}
+  #top {
+    top: max(10px, env(safe-area-inset-top));
+  }
 
-/* 主選單畫面覆蓋層 */
-#home-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  background: linear-gradient(160deg, #145b43 0%, #0d3b2b 100%);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  text-align: center;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-}
+  #bottom {
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
 
-#home-screen.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
+  h1 {
+    font-size: 19px;
+    color: #155744;
+    margin: 0 0 7px;
+  }
 
-.menu-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  padding: 32px 24px;
-  max-width: 360px;
-  width: 100%;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-}
+  p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 6px 0;
+    color: #222;
+  }
 
-.menu-icon {
-  font-size: 56px;
-  margin-bottom: 12px;
-  display: block;
-}
+  button {
+    background: #176b57;
+    color: #fff;
+    border: 0;
+    border-radius: 9px;
+    padding: 11px 13px;
+    font: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.15s ease;
+  }
 
-.menu-card h1 {
-  font-size: 22px;
-  margin: 0 0 8px;
-  letter-spacing: 0.5px;
-}
+  button:active:not(:disabled) {
+    background: #114f40;
+  }
 
-.menu-card p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #d8efe4;
-  margin: 0 0 24px;
-}
+  button:disabled {
+    background: #888;
+    cursor: not-allowed;
+  }
 
-.menu-btn {
-  width: 100%;
-  padding: 15px 20px;
-  font-size: 16px;
-  font-weight: 700;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: transform 0.15s ease;
-  margin-bottom: 12px;
-}
+  #start {
+    margin-top: 10px;
+    width: 100%;
+    font-weight: bold;
+  }
 
-.menu-btn:last-of-type {
-  margin-bottom: 0;
-}
+  .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
 
-.menu-btn:active {
-  transform: scale(0.96);
-}
+  label {
+    font-weight: bold;
+    color: #155744;
+  }
 
-.btn-ar {
-  background: var(--gold);
-  color: #18352b;
-  box-shadow: 0 4px 15px rgba(245, 201, 93, 0.35);
-}
+  input[type="range"] {
+    width: 100%;
+    height: 38px;
+    accent-color: #176b57;
+    touch-action: pan-x;
+  }
 
-.btn-quiz {
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
+  .note {
+    font-size: 12px;
+    color: #666;
+  }
 
-/* 全螢幕 AR 模式下的極簡浮動介面 */
-#ar-hud {
-  display: none;
-}
+  .row button {
+    flex: 1;
+  }
 
-body.ar-active #ar-hud {
-  display: block;
-}
+  #result {
+    min-height: 44px;
+    color: #155744;
+    font-weight: 500;
+  }
 
-.ar-top-bar {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  pointer-events: none;
-}
+  #levelValue {
+    font-weight: bold;
+    color: #176b57;
+  }
 
-.arstatus {
-  flex: 1;
-  background: rgba(16, 39, 29, 0.78);
-  backdrop-filter: blur(6px);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  text-align: center;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-.back-pill {
-  pointer-events: auto;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--ink);
-  border: none;
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* 底部極簡浮動工具列（不遮擋相機畫面） */
-.ar-floating-tools {
-  position: fixed;
-  bottom: 16px;
-  left: 12px;
-  right: 12px;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  pointer-events: none;
-}
-
-#toast-info {
-  background: rgba(16, 39, 29, 0.85);
-  backdrop-filter: blur(6px);
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 12px;
-  font-size: 12px;
-  max-width: 92vw;
-  text-align: center;
-  border: 1px solid rgba(255,255,255,0.15);
-  display: none;
-}
-
-.tool-pills {
-  pointer-events: auto;
-  display: flex;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(8px);
-  padding: 6px 10px;
-  border-radius: 999px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-}
-
-.tool-pills button {
-  border: 0;
-  border-radius: 999px;
-  padding: 7px 12px;
-  background: var(--mint);
-  color: var(--green);
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.tool-pills button:active {
-  transform: scale(0.95);
-}
-
-/* 測驗專屬全螢幕視窗 */
-#quiz-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  background: #f2f8f5;
-  display: none;
-  flex-direction: column;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-#quiz-modal.active {
-  display: flex;
-}
-
-.quiz-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.quiz-header h2 {
-  font-size: 18px;
-  margin: 0;
-  color: var(--green);
-}
-
-.quiz-card {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 6px 24px rgba(23, 107, 75, 0.08);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.quizq {
-  font-weight: 700;
-  font-size: 16px;
-  margin: 0 0 16px;
-  line-height: 1.5;
-}
-
-.choice {
-  display: block;
-  width: 100%;
-  text-align: left;
-  margin: 8px 0;
-  padding: 14px 16px;
-  border: 1px solid #d5e5dc;
-  border-radius: 12px;
-  background: #f7fbf9;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.choice:active {
-  background: var(--mint);
-}
-
-#feedback {
-  font-size: 13px;
-  line-height: 1.5;
-  margin-top: 14px;
-  min-height: 20px;
-  color: var(--green);
-  font-weight: 600;
-}
+  #status {
+    overflow-wrap: anywhere;
+  }
 </style>
+
+<script>
+/**
+ * 荷花水槽互動元件 (tank-interaction)
+ * ------------------------------------------------------------
+ * 1. 讀取 TankRoot 的水位基準與深度範圍（具備預設值備援）
+ * 2. 調整半透明材質（TankGlass、WaterVolume、WaterTop、SoilMud、WaterDroplet）渲染順序
+ * 3. 控制水體縮放與水面高度；荷花為挺水性植物，根部固定在槽底泥土 (this.base)
+ */
+AFRAME.registerComponent('tank-interaction', {
+  init: function () {
+    this.ready = false;
+    this.depth = 0.42;
+    this.targetDepth = 0.42;
+
+    this.el.addEventListener('model-loaded', () => {
+      try {
+        const mesh = this.el.getObject3D('mesh');
+
+        this.body = mesh.getObjectByName('WaterBody');
+        this.surface = mesh.getObjectByName('WaterSurface');
+        this.plant = mesh.getObjectByName('LotusRoot');
+        const tank = mesh.getObjectByName('TankRoot');
+
+        if (!this.body || !this.surface || !this.plant || !tank) {
+          throw new Error(
+            '模型缺少互動物件，請確認已匯出正確的 lotus_tank.glb。'
+          );
+        }
+
+        // 若匯出時未勾選 Custom Properties，自動採用與建模腳本一致的預設值
+        this.base = Number(tank.userData.water_base ?? 0.14);
+        this.minDepth = Number(tank.userData.water_min_depth ?? 0.20);
+        this.maxDepth = Number(tank.userData.water_max_depth ?? 0.65);
+
+        // 修正半透明材質與植物花瓣/荷葉的雙面渲染
+        mesh.traverse(obj => {
+          if (!obj.isMesh) return;
+
+          const materials = Array.isArray(obj.material)
+            ? obj.material
+            : [obj.material];
+
+          for (const mat of materials) {
+            if (!mat) continue;
+
+            // 為純色未帶貼圖的荷花/荷葉材質補充代表性色調（若貼圖未烘焙進 GLB 時可維持清晰層次）
+            const fallbackColors = {
+              LotusPetal: 0xf05d94,
+              LotusBudPetal: 0xe6457d,
+              LotusSepal: 0x7aa348,
+              LotusLeaf: 0x3b8c2e
+            };
+            if (!mat.map && fallbackColors[mat.name] !== undefined) {
+              mat.color.setHex(fallbackColors[mat.name]);
+            }
+
+            // 設定半透明物件的透明度與渲染順序，避免玻璃與水體互相遮擋破圖
+            const alphaMap = {
+              TankGlass: 0.12,
+              WaterVolume: 0.15,
+              WaterTop: 0.35,
+              SoilMud: 0.88,
+              WaterDroplet: 0.65
+            };
+
+            if (alphaMap[mat.name] !== undefined) {
+              mat.transparent = true;
+              mat.opacity = alphaMap[mat.name];
+              mat.needsUpdate = true;
+            }
+
+            if (mat.transparent || mat.opacity < 1) {
+              mat.depthWrite = false;
+              mat.side = AFRAME.THREE.DoubleSide;
+
+              if (mat.name === 'TankGlass') {
+                obj.renderOrder = 4;
+              } else if (mat.name === 'WaterTop' || mat.name === 'WaterVolume') {
+                obj.renderOrder = 3;
+              } else {
+                obj.renderOrder = 2;
+              }
+            } else {
+              mat.side = AFRAME.THREE.DoubleSide;
+            }
+          }
+        });
+
+        this.ready = true;
+        this.setLevel(50);
+        this.depth = this.targetDepth;
+        this.applyDepth();
+
+        this.el.dataset.tankReady = 'true';
+        this.el.emit('tank-ready', {}, false);
+
+      } catch (error) {
+        console.error(error);
+        this.el.dataset.tankError = error.message;
+        this.el.emit('tank-error', { message: error.message }, false);
+      }
+    });
+  },
+
+  setLevel: function (percent) {
+    if (!this.ready) return;
+    const p = Math.min(100, Math.max(0, Number(percent))) / 100;
+    this.targetDepth = this.minDepth + (this.maxDepth - this.minDepth) * p;
+  },
+
+  applyDepth: function () {
+    // 改變水體高度，底部位置保持固定在泥土表面 (this.base)
+    this.body.position.y = this.base;
+    this.body.scale.y = this.depth;
+
+    // 水面位於水體最上方
+    this.surface.position.y = this.base + this.depth;
+
+    // 荷花為挺水性植物：根與蓮藕固定於槽底泥土中，不隨水面漂浮
+    this.plant.position.y = this.base;
+  },
+
+  tick: function (time, delta) {
+    if (!this.ready) return;
+    // 指數平滑過渡，使水位升降流暢自然
+    const alpha = 1 - Math.exp(-Math.min(delta || 16, 100) / 140);
+    this.depth += (this.targetDepth - this.depth) * alpha;
+    this.applyDepth();
+  }
+});
+</script>
 </head>
+
 <body>
 
-<!-- 簡化主畫面：僅保留「開啟 AR 相機」與「開啟測驗」兩個按鈕 -->
-<div id="home-screen">
-  <div class="menu-card">
-    <span class="menu-icon">🌸</span>
-    <h1>AR 荷花觀察教室</h1>
-    <p>自然科學・挺水植物探索單元</p>
-    <button class="menu-btn btn-ar" onclick="openARMode()">📷 開啟 AR 相機</button>
-    <button class="menu-btn btn-quiz" onclick="openQuizMode()">🧪 開啟觀察測驗</button>
-  </div>
+<!-- 頂部狀態與啟動面板 -->
+<div id="top" class="panel">
+  <h1>荷花與水位 AR 實驗</h1>
+
+  <p id="status" role="status" aria-live="polite">
+    正在載入立體荷花水槽……
+  </p>
+
+  <button id="start" disabled>載入中</button>
+
+  <p class="note">
+    荷花外形與水槽比例為教學示意；水位升降為互動模擬。
+  </p>
 </div>
 
-<!-- 全螢幕 AR 模式下的極簡浮動介面 -->
-<div id="ar-hud">
-  <div class="ar-top-bar">
-    <div class="arstatus" id="status">等待啟動相機…</div>
-    <button class="back-pill" onclick="closeARMode()">✕ 返回</button>
+<!-- 底部互動控制面板 -->
+<div id="bottom" class="panel" hidden>
+  <div class="row">
+    <label for="level">調整水位</label>
+    <span id="levelValue">50%</span>
   </div>
 
-  <div class="ar-floating-tools">
-    <div id="toast-info"></div>
-    <div class="tool-pills">
-      <button onclick="toggleLabels()">🏷️ 標籤</button>
-      <button onclick="toggleUnderwater()">💧 透視水下</button>
-      <button onclick="growth()">🌱 生長階段</button>
-    </div>
+  <input
+    id="level"
+    type="range"
+    min="0"
+    max="100"
+    value="50"
+    step="1"
+    aria-label="水位，相對於可調整範圍的百分比"
+  >
+
+  <div class="row">
+    <button type="button" data-level="0">低水位</button>
+    <button type="button" data-level="50">中水位</button>
+    <button type="button" data-level="100">高水位</button>
   </div>
+
+  <p id="result">
+    試著改變水位，觀察荷花葉片與花朵的位置變化。
+  </p>
+
+  <div class="row">
+    <button type="button" id="rotate">旋轉</button>
+    <button type="button" id="view">換角度</button>
+    <button type="button" id="reset">重設</button>
+  </div>
+
+  <p class="note">
+    觀察：荷花會隨水面上下漂浮嗎？它的蓮藕與根固定在哪裡？
+  </p>
 </div>
 
-<!-- MindAR 場景 (關閉預設 uiLoading 避免卡在藍色讀取畫面) -->
+<!-- MindAR + A-Frame 3D 場景 -->
 <a-scene
-  id="arScene"
-  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: yes; uiError: no;"
-  color-space="sRGB"
-  renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
+  mindar-image="
+    imageTargetSrc: ./targets.mind;
+    autoStart: false;
+    uiLoading: no;
+    uiScanning: no;
+    uiError: no;
+  "
+  renderer="
+    colorManagement: true;
+    alpha: true;
+  "
   vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
-
+  device-orientation-permission-ui="enabled: false"
+  loading-screen="enabled: false"
+>
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <!-- 追蹤第 0 張目標圖片 (targets.mind) -->
-  <a-entity mindar-image-target="targetIndex: 0" id="lotusTarget">
-    <!-- 調整位置與角度，讓 3D 荷花立體站立在照片正中央 -->
-    <a-entity id="lotus" position="0 0.25 0.35" rotation="75 0 0" scale="0.45 0.45 0.45">
-      <!-- 水底泥土與半透明水面 -->
-      <a-cylinder id="mud" position="0 -0.72 0" radius="1.15" height=".12" color="#72543a"></a-cylinder>
-      <a-box id="water" position="0 -.43 0" width="2.25" height=".015" depth="2.25" color="#69b9d4" opacity=".42"></a-box>
-      
-      <!-- 根 -->
-      <a-entity id="roots" position="0 -0.55 0">
-        <a-cylinder position="-.13 -.13 0" radius-bottom=".018" radius-top=".008" height=".42" rotation="0 0 -18" color="#e6d4a2"></a-cylinder>
-        <a-cylinder position=".12 -.13 .06" radius-bottom=".018" radius-top=".008" height=".38" rotation="0 0 22" color="#e6d4a2"></a-cylinder>
-        <a-cylinder position="0 -.14 -.1" radius-bottom=".014" radius-top=".006" height=".36" rotation="12 0 0" color="#e6d4a2"></a-cylinder>
+  <a-entity light="type: ambient; intensity: 1.15"></a-entity>
+  <a-entity light="type: directional; intensity: 1.25" position="1 2.5 3"></a-entity>
+
+  <a-entity id="target" mindar-image-target="targetIndex: 0">
+    <a-entity id="spin" position="0 -0.1 0.02">
+      <a-entity id="tilt" rotation="70 0 0">
+        <a-entity
+          id="tank"
+          gltf-model="url(./lotus_tank.glb)"
+          scale="0.52 0.52 0.52"
+          tank-interaction
+        ></a-entity>
       </a-entity>
-      
-      <!-- 地下莖 (蓮藕) -->
-      <a-cylinder id="rhizome" position="0 -.48 0" radius=".10" height=".75" rotation="0 0 90" color="#d9b66d"></a-cylinder>
-      
-      <!-- 葉柄 -->
-      <a-cylinder position="-.22 .05 0" radius=".025" height="1.05" rotation="0 0 -10" color="#438b4b"></a-cylinder>
-      <a-cylinder position=".38 .02 .1" radius=".022" height=".92" rotation="0 0 18" color="#438b4b"></a-cylinder>
-      <a-cylinder position="0 .17 -.28" radius=".022" height="1.28" rotation="0 0 2" color="#438b4b"></a-cylinder>
-      
-      <!-- 荷葉 -->
-      <a-entity id="leaf1" position="-.53 .50 0" rotation="-8 0 10">
-        <a-circle radius=".53" color="#388b43" material="side:double"></a-circle>
-        <a-circle radius=".035" color="#a5c96a" position="0 0 .008"></a-circle>
-      </a-entity>
-      <a-entity id="leaf2" position=".55 .43 .08" rotation="5 0 -12">
-        <a-circle radius=".43" color="#4a9c4d" material="side:double"></a-circle>
-        <a-circle radius=".028" color="#b4d47a" position="0 0 .008"></a-circle>
-      </a-entity>
-      
-      <!-- 花梗與花朵 -->
-      <a-cylinder position="0 .62 -.28" radius=".025" height=".88" color="#438b4b"></a-cylinder>
-      <a-entity id="flower" position="0 1.12 -.28">
-        <a-sphere radius=".16" color="#f5c84e" scale="1 .45 1"></a-sphere>
-        <a-entity id="petals"></a-entity>
-        <a-sphere radius=".08" color="#e9a92e" position="0 .04 0"></a-sphere>
-      </a-entity>
-      
-      <!-- 蓮蓬 -->
-      <a-entity id="pod" position=".39 .72 .1" visible="false">
-        <a-cylinder radius=".12" height=".19" color="#8da94a" rotation="0 0 0"></a-cylinder>
-        <a-sphere radius=".13" color="#9ab653" position="0 .08 0" scale="1 .45 1"></a-sphere>
-      </a-entity>
-      
-      <!-- 中文構造標籤容器 -->
-      <a-entity id="labels" visible="true"></a-entity>
     </a-entity>
   </a-entity>
 </a-scene>
 
-<!-- 測驗專屬視窗 -->
-<section id="quiz-modal">
-  <div class="quiz-header">
-    <h2>🧪 荷花觀察挑戰</h2>
-    <button class="back-pill" style="background:#e2ece6;" onclick="closeQuizMode()">✕ 返回主選單</button>
-  </div>
-  <div class="quiz-card">
-    <div id="quiz">
-      <div class="quizq" id="question">第 1 題：荷花的根主要生長在哪裡？</div>
-      <div id="choices"></div>
-      <div id="feedback"></div>
-    </div>
-  </div>
-</section>
-
 <script>
-let arRunning = false;
-// 按下「開啟 AR 相機」：先檢查 targets.mind 是否存在，再進入全螢幕相機模式
-async function openARMode() {
-  document.getElementById('home-screen').classList.add('hidden');
-  document.body.classList.add('ar-active');
-  const statusEl = document.getElementById('status');
-  statusEl.textContent = '⏳ 正在檢查圖卡辨識檔與啟動相機…';
+const scene = document.querySelector('a-scene');
+const tank = document.querySelector('#tank');
+
+const status = document.querySelector('#status');
+const start = document.querySelector('#start');
+const bottom = document.querySelector('#bottom');
+
+const level = document.querySelector('#level');
+const value = document.querySelector('#levelValue');
+const result = document.querySelector('#result');
+
+let sceneReady = Boolean(scene.hasLoaded);
+let modelReady = false;
+let failed = false;
+let starting = false;
+let running = false;
+
+let angle = 0;
+let viewIndex = 0;
+const views = [70, 90, 40];
+
+function ready() {
+  if (failed || running || starting) return;
+  if (sceneReady && modelReady) {
+    start.disabled = false;
+    start.textContent = '啟動 AR 鏡頭';
+    status.textContent = '水槽已載入。啟動鏡頭後，請掃描荷花圖卡。';
+  }
+}
+
+function fail(message) {
+  failed = true;
+  running = false;
+  starting = false;
+
+  status.textContent = message;
+  start.hidden = false;
+  start.disabled = true;
+  start.textContent = '請修正後重新整理';
+  bottom.hidden = true;
 
   try {
-    // 檢查同目錄下是否有 targets.mind，避免找不到檔案時永遠卡在藍色讀取畫面
-    const checkFile = await fetch('./targets.mind', { method: 'HEAD' });
-    if (!checkFile.ok) {
-      statusEl.textContent = '⚠️ 找不到 targets.mind！請先將荷花照片轉檔並上傳至 GitHub 同目錄。';
-      return;
-    }
-  } catch (e) {
-    // 若本機環境不支援 HEAD 請求則繼續嘗試啟動
-  }
-
-  if (!arRunning) {
-    arRunning = true;
-    const sceneEl = document.querySelector('#arScene');
-    const arSystem = sceneEl.systems['mindar-image-system'];
-    arSystem.start();
+    scene.systems['mindar-image-system']?.stop();
+  } catch (error) {
+    console.warn(error);
   }
 }
 
-// 從 AR 模式返回主選單並停止相機
-function closeARMode() {
-  document.body.classList.remove('ar-active');
-  document.getElementById('home-screen').classList.remove('hidden');
-  document.getElementById('toast-info').style.display = 'none';
+scene.addEventListener('loaded', () => {
+  sceneReady = true;
+  ready();
+});
 
-  if (arRunning) {
-    arRunning = false;
-    const sceneEl = document.querySelector('#arScene');
-    const arSystem = sceneEl.systems['mindar-image-system'];
-    arSystem.stop();
+tank.addEventListener('tank-ready', () => {
+  modelReady = true;
+  ready();
+});
+
+tank.addEventListener('tank-error', event => {
+  fail(event.detail.message);
+});
+
+tank.addEventListener('model-error', () => {
+  fail('水槽載入失敗，請確認 lotus_tank.glb 已上傳至同一資料夾。');
+});
+
+if (tank.dataset.tankReady === 'true') modelReady = true;
+if (tank.dataset.tankError) fail(tank.dataset.tankError);
+ready();
+
+scene.addEventListener('arReady', () => {
+  if (failed) return;
+  starting = false;
+  running = true;
+
+  start.hidden = true;
+  bottom.hidden = false;
+  status.textContent = '請對準荷花圖卡，辨識後拖動水位滑桿。';
+});
+
+scene.addEventListener('arError', () => {
+  fail('無法啟動鏡頭，請確認相機權限，以及 targets.mind 是否存在。');
+});
+
+start.addEventListener('click', async () => {
+  if (failed || starting || running || !modelReady || !sceneReady) return;
+
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    status.textContent = '請使用手機瀏覽器開啟 HTTPS 網址，並允許相機權限。';
+    return;
   }
-}
 
-// 按下「開啟測驗」：開啟測驗視窗
-function openQuizMode() {
-  document.getElementById('home-screen').classList.add('hidden');
-  document.getElementById('quiz-modal').classList.add('active');
-  restart();
-}
+  starting = true;
+  start.disabled = true;
+  start.textContent = '啟動中……';
+  status.textContent = '請允許網站使用相機……';
 
-// 關閉測驗返回主選單
-function closeQuizMode() {
-  document.getElementById('quiz-modal').classList.remove('active');
-  document.getElementById('home-screen').classList.remove('hidden');
-}
-
-// 監聽 MindAR 相機與模型就緒事件
-document.querySelector('#arScene').addEventListener('arReady', () => {
-  document.getElementById('status').textContent = '📷 請將鏡頭對準荷花照片';
-  // 確保手機瀏覽器 (特別是 iOS Safari) 的相機 video 正常內嵌播放
-  const video = document.querySelector('video');
-  if (video) {
-    video.setAttribute('playsinline', '');
-    video.setAttribute('webkit-playsinline', '');
+  try {
+    await scene.systems['mindar-image-system'].start();
+  } catch (error) {
+    console.error(error);
+    fail('AR 啟動失敗：請允許相機權限，並確認 targets.mind 已上傳。');
   }
 });
 
-document.querySelector('#arScene').addEventListener('arError', () => {
-  document.getElementById('status').textContent = '⚠️ 相機啟動失敗，請確認網址為 HTTPS 並允許相機權限。';
-});
-
-document.querySelector('#arScene').addEventListener('arError', () => {
-  document.getElementById('status').textContent = '⚠️ 相機啟動失敗，請確認網址為 HTTPS 並允許相機權限，或檢查 targets.mind 是否已上傳。';
-});
-
-// 1. 動態生成荷花花瓣 (外圈 12 片 + 內圈 8 片)
-function buildPetals() {
-  const petalsEl = document.querySelector('#petals');
-  if (!petalsEl) return;
-  for (let i = 0; i < 12; i++) {
-    const angle = (i * 360) / 12;
-    const rad = (angle * Math.PI) / 180;
-    const p = document.createElement('a-sphere');
-    p.setAttribute('radius', '0.16');
-    p.setAttribute('scale', '0.55 1.35 0.22');
-    p.setAttribute('color', '#f78fb3');
-    p.setAttribute('position', `${Math.sin(rad) * 0.22} 0.08 ${Math.cos(rad) * 0.22}`);
-    p.setAttribute('rotation', `42 ${angle} 0`);
-    petalsEl.appendChild(p);
+document.querySelector('#target').addEventListener('targetFound', () => {
+  if (!failed) {
+    status.textContent = '辨識成功！改變水位，觀察荷花與水面的相對位置。';
   }
-  for (let i = 0; i < 8; i++) {
-    const angle = (i * 360) / 8 + 22.5;
-    const rad = (angle * Math.PI) / 180;
-    const p = document.createElement('a-sphere');
-    p.setAttribute('radius', '0.14');
-    p.setAttribute('scale', '0.5 1.25 0.2');
-    p.setAttribute('color', '#f8a5c2');
-    p.setAttribute('position', `${Math.sin(rad) * 0.14} 0.11 ${Math.cos(rad) * 0.14}`);
-    p.setAttribute('rotation', `25 ${angle} 0`);
-    petalsEl.appendChild(p);
+});
+
+document.querySelector('#target').addEventListener('targetLost', () => {
+  if (running) {
+    status.textContent = '圖卡離開鏡頭，請重新對準荷花圖卡。';
+  }
+});
+
+function setLevel(percent) {
+  const p = Math.max(0, Math.min(100, Number(percent)));
+  level.value = p;
+  value.textContent = p + '%';
+
+  tank.components['tank-interaction']?.setLevel(p);
+
+  if (p < 34) {
+    result.textContent = '低水位：荷花根與蓮藕固定在泥土中，大部分葉柄與花梗挺出水面。';
+  } else if (p > 66) {
+    result.textContent = '高水位：水面上升淹沒部分葉柄，但荷花不會隨水面漂浮，仍挺立於水中。';
+  } else {
+    result.textContent = '中水位：荷花根部固定在槽底泥土，葉片與花朵挺出水面。';
   }
 }
 
-// 2. 動態生成支援中文的 3D 標籤貼圖
-function buildChineseLabels() {
-  const container = document.querySelector('#labels');
-  if (!container) return;
+level.addEventListener('input', event => {
+  setLevel(event.target.value);
+});
 
-  const labelData = [
-    { text: "花朵", pos: "0.35 1.35 -0.28", bg: "#d63384" },
-    { text: "葉片", pos: "-0.85 0.72 0", bg: "#198754" },
-    { text: "葉柄", pos: "0.48 0.15 0.1", bg: "#198754" },
-    { text: "水面", pos: "-0.95 -0.35 0.45", bg: "#0dcaf0", color: "#000" },
-    { text: "地下莖", pos: "0.52 -0.48 0.16", bg: "#856404" },
-    { text: "根", pos: "0.35 -0.82 0.1", bg: "#6c757d" }
-  ];
-
-  labelData.forEach(item => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 96;
-    const ctx = canvas.getContext('2d');
-
-    ctx.fillStyle = item.bg || 'rgba(20, 91, 67, 0.9)';
-    ctx.beginPath();
-    ctx.roundRect(16, 16, 224, 64, 16);
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    ctx.fillStyle = item.color || '#ffffff';
-    ctx.font = 'bold 36px "Noto Sans TC", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(item.text, 128, 50);
-
-    const plane = document.createElement('a-plane');
-    plane.setAttribute('position', item.pos);
-    plane.setAttribute('width', '0.52');
-    plane.setAttribute('height', '0.2');
-    plane.setAttribute('material', `src: ${canvas.toDataURL()}; transparent: true; side: double;`);
-    container.appendChild(plane);
+document.querySelectorAll('[data-level]').forEach(button => {
+  button.addEventListener('click', () => {
+    setLevel(button.dataset.level);
   });
-}
-
-// 初始化花瓣與中文標籤
-buildPetals();
-buildChineseLabels();
-
-// 3. 監聽圖片追蹤事件
-const targetEl = document.querySelector('#lotusTarget');
-targetEl.addEventListener('targetFound', () => {
-  document.getElementById('status').textContent = '🌸 掃描成功！移動手機觀察 3D 荷花';
-});
-targetEl.addEventListener('targetLost', () => {
-  document.getElementById('status').textContent = '尚未看到荷花照片，請對準圖卡';
 });
 
-let labelsOn = true, under = false, stage = 1;
+document.querySelector('#rotate').addEventListener('click', () => {
+  angle = (angle + 30) % 360;
+  document.querySelector('#spin').setAttribute('rotation', `0 0 ${angle}`);
+});
 
-function toggleLabels(){
-  const labels = document.querySelector('#labels');
-  if (!labels) return;
-  labelsOn = !labelsOn;
-  labels.setAttribute('visible', labelsOn);
-  showToast(labelsOn ? '已顯示構造標籤' : '已隱藏構造標籤，試著自己指認看看！');
-}
+document.querySelector('#view').addEventListener('click', () => {
+  viewIndex = (viewIndex + 1) % views.length;
+  document.querySelector('#tilt').setAttribute('rotation', `${views[viewIndex]} 0 0`);
+});
 
-function toggleUnderwater(){
-  const mud = document.querySelector('#mud');
-  if (!mud) return;
-  under = !under;
-  if (under) {
-    mud.setAttribute('opacity', '0.25');
-    mud.setAttribute('transparent', 'true');
-    showToast('<b>透視水下：</b>觀察埋在泥土中的地下莖（蓮藕）與根！');
-  } else {
-    mud.setAttribute('opacity', '1');
-    mud.setAttribute('transparent', 'false');
-    showToast('已恢復為一般視角');
+document.querySelector('#reset').addEventListener('click', () => {
+  angle = 0;
+  viewIndex = 0;
+  setLevel(50);
+  document.querySelector('#spin').setAttribute('rotation', '0 0 0');
+  document.querySelector('#tilt').setAttribute('rotation', '70 0 0');
+});
+
+window.addEventListener('pagehide', () => {
+  try {
+    scene.systems['mindar-image-system']?.stop();
+  } catch (error) {
+    console.warn(error);
   }
-}
-
-function growth(){
-  const f = document.querySelector('#flower');
-  const pod = document.querySelector('#pod');
-  if (!f || !pod) return;
-
-  stage = (stage + 1) % 3;
-  if(stage === 0){
-    f.setAttribute('visible', true);
-    f.setAttribute('scale', '0.55 0.75 0.55');
-    pod.setAttribute('visible', false);
-    showToast('<b>花苞階段：</b>花瓣緊閉尚未完全展開');
-  } else if(stage === 1){
-    f.setAttribute('visible', true);
-    f.setAttribute('scale', '1 1 1');
-    pod.setAttribute('visible', false);
-    showToast('<b>盛開階段：</b>花瓣完全展開，花蕊清晰可見');
-  } else {
-    f.setAttribute('visible', false);
-    pod.setAttribute('visible', true);
-    showToast('<b>花後階段：</b>花謝後雌蕊發育為蓮蓬，內有蓮子');
-  }
-}
-
-const qs = [
-  {q: "荷花的根主要生長在哪裡？", a: ["水面上", "水底泥土中", "漂浮在水面"], c: 1, e: "根負責固定植物，並從水底泥土吸收水分和礦物質。"},
-  {q: "荷花屬於哪一類水生植物？", a: ["挺水植物", "沉水植物", "漂浮植物"], c: 0, e: "荷花的根在水底泥土中，花朵及大部分葉片挺出水面。"},
-  {q: "常吃的「蓮藕」是荷花的哪個部位？", a: ["根", "葉柄", "地下莖"], c: 2, e: "蓮藕是荷花的地下莖，膨大橫向生長在泥土中儲存養分。"},
-  {q: "荷花花謝後，會形成什麼構造？", a: ["蓮蓬", "松果", "果莢"], c: 0, e: "花謝後，花托膨大發育形成蓮蓬，裡面有蓮子。"}
-];
-
-let qi = 0, score = 0, locked = false;
-
-function renderQ(){
-  document.getElementById('question').textContent = `第 ${qi + 1} 題：${qs[qi].q}`;
-  document.getElementById('choices').innerHTML = qs[qi].a.map((x, i) => `<button class="choice" onclick="answer(${i})">${"ABC"[i]}. ${x}</button>`).join('');
-  document.getElementById('feedback').textContent = '';
-}
-
-function answer(i){
-  if(locked) return;
-  locked = true;
-  const q = qs[qi];
-  if(i === q.c){
-    score++;
-    document.getElementById('feedback').innerHTML = '✅ 答對了！' + q.e;
-  } else {
-    document.getElementById('feedback').innerHTML = '再想一想！正確答案是：' + q.a[q.c] + '。' + q.e;
-  }
-  setTimeout(() => {
-    qi++;
-    locked = false;
-    if(qi < qs.length){
-      renderQ();
-    } else {
-      document.getElementById('question').textContent = '挑戰完成！';
-      document.getElementById('choices').innerHTML = `<p style="font-size:18px;margin:12px 0;"><b>你的得分：${score} / ${qs.length}</b></p><button class="choice" style="text-align:center;background:var(--green);color:#fff;" onclick="restart()">🔄 再玩一次</button>`;
-      document.getElementById('feedback').textContent = '太棒了！你已完成挺水植物荷花的所有觀察挑戰。';
-    }
-  }, 2200);
-}
-
-function restart(){
-  qi = 0;
-  score = 0;
-  renderQ();
-}
-renderQ();
+});
 </script>
+
 </body>
 </html>
