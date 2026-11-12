@@ -348,10 +348,10 @@ body.ar-active #ar-hud {
   </div>
 </div>
 
-<!-- MindAR 場景 (全螢幕渲染，alpha: true 確保相機畫面穿透) -->
+<!-- MindAR 場景 (關閉預設 uiLoading 避免卡在藍色讀取畫面) -->
 <a-scene
   id="arScene"
-  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: yes;"
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: yes; uiError: no;"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
   vr-mode-ui="enabled: false"
@@ -429,23 +429,23 @@ body.ar-active #ar-hud {
 
 <script>
 let arRunning = false;
-let toastTimer = null;
-
-function showToast(htmlText) {
-  const toast = document.getElementById('toast-info');
-  toast.innerHTML = htmlText;
-  toast.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.style.display = 'none';
-  }, 3500);
-}
-
-// 按下「開啟 AR 相機」：進入全螢幕相機模式
-function openARMode() {
+// 按下「開啟 AR 相機」：先檢查 targets.mind 是否存在，再進入全螢幕相機模式
+async function openARMode() {
   document.getElementById('home-screen').classList.add('hidden');
   document.body.classList.add('ar-active');
-  document.getElementById('status').textContent = '正在啟動相機…請允許權限並對準荷花照片';
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = '⏳ 正在檢查圖卡辨識檔與啟動相機…';
+
+  try {
+    // 檢查同目錄下是否有 targets.mind，避免找不到檔案時永遠卡在藍色讀取畫面
+    const checkFile = await fetch('./targets.mind', { method: 'HEAD' });
+    if (!checkFile.ok) {
+      statusEl.textContent = '⚠️ 找不到 targets.mind！請先將荷花照片轉檔並上傳至 GitHub 同目錄。';
+      return;
+    }
+  } catch (e) {
+    // 若本機環境不支援 HEAD 請求則繼續嘗試啟動
+  }
 
   if (!arRunning) {
     arRunning = true;
@@ -485,6 +485,16 @@ function closeQuizMode() {
 // 監聽 MindAR 相機與模型就緒事件
 document.querySelector('#arScene').addEventListener('arReady', () => {
   document.getElementById('status').textContent = '📷 請將鏡頭對準荷花照片';
+  // 確保手機瀏覽器 (特別是 iOS Safari) 的相機 video 正常內嵌播放
+  const video = document.querySelector('video');
+  if (video) {
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+  }
+});
+
+document.querySelector('#arScene').addEventListener('arError', () => {
+  document.getElementById('status').textContent = '⚠️ 相機啟動失敗，請確認網址為 HTTPS 並允許相機權限。';
 });
 
 document.querySelector('#arScene').addEventListener('arError', () => {
