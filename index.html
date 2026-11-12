@@ -29,6 +29,7 @@ body.ar-active {
   background-color: transparent !important;
 }
 
+/* 修正 MindAR 相機視訊層級，確保在畫布正下方且不被遮擋 */
 video {
   position: fixed !important;
   top: 0 !important;
@@ -36,7 +37,7 @@ video {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  z-index: -2 !important;
+  z-index: 0 !important;
 }
 
 a-scene {
@@ -46,6 +47,7 @@ a-scene {
   width: 100vw !important;
   height: 100vh !important;
   z-index: 1 !important;
+  background-color: transparent !important;
 }
 .a-canvas {
   background-color: transparent !important;
@@ -235,12 +237,12 @@ button.primary { background: var(--green); color: white; }
 
 <div class="arstatus" id="status">等待啟動相機…</div>
 
-<!-- MindAR 場景 (設定 autoStart: false 確保按下按鈕才開啟相機) -->
+<!-- MindAR 場景 (加入 alpha: true 讓 WebGL 背景完全透明穿透) -->
 <a-scene
   id="arScene"
   mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: yes;"
   color-space="sRGB"
-  renderer="colorManagement: true, physicallyCorrectLights"
+  renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false">
 
@@ -343,6 +345,15 @@ function startAR() {
   const arSystem = sceneEl.systems['mindar-image-system'];
   arSystem.start();
 }
+
+// 監聽 MindAR 相機與模型就緒事件
+document.querySelector('#arScene').addEventListener('arReady', () => {
+  document.getElementById('status').textContent = '📷 相機已開啟！請將鏡頭對準荷花照片';
+});
+
+document.querySelector('#arScene').addEventListener('arError', () => {
+  document.getElementById('status').textContent = '⚠️ 相機啟動失敗，請確認網址為 HTTPS 並允許相機權限，或檢查 targets.mind 是否已上傳。';
+});
 
 // 1. 動態生成荷花花瓣 (外圈 12 片 + 內圈 8 片)
 function buildPetals() {
